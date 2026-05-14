@@ -1,0 +1,3 @@
+ALTER TABLE orders DROP COLUMN IF EXISTS delivery_address;
+ALTER TABLE orders DROP COLUMN IF EXISTS restaurant_id;
+ALTER TABLE orders DROP COLUMN IF EXISTS courier_id;
