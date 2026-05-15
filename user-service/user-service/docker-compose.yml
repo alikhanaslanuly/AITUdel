@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: user_db
+    ports:
+      - "5433:5432"   # offset to avoid conflict with order-service
+    volumes:
+      - pgdata_user:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6380:6379"   # offset to avoid conflict with order-service
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── NATS is shared with order-service ────────────────────────────────────────
+  # Do NOT start a second NATS container here — it binds to the same 4222 port.
+  # Run user-service alongside order-service's docker-compose which owns NATS,
+  # or use the combined compose at the root of the monorepo.
+  # NATS_URL for user-service must point to the shared instance: nats://nats:4222
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "50052:50052"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: user_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
+      GRPC_PORT: 50052
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_ACCESS_EXP_MIN: 15
+      JWT_REFRESH_EXP_HOURS: 168
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@aitudel.kz}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata_user:
