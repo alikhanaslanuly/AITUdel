@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package restaurant;
+
+option go_package = "./proto";
+
+service RestaurantService {
+
+  rpc ListRestaurants(ListRestaurantsRequest)
+      returns (ListRestaurantsResponse);
+
+  rpc GetRestaurant(GetRestaurantRequest)
+      returns (RestaurantResponse);
+
+  rpc SearchItems(SearchItemsRequest)
+      returns (SearchItemsResponse);
+
+  rpc GetItem(GetItemRequest)
+      returns (ItemResponse);
+
+  rpc RateRestaurant(RateRestaurantRequest)
+      returns (RateRestaurantResponse);
+}
+
+message Restaurant {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+  double rating = 4;
+}
+
+message MenuItem {
+  int64 id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  int32 stock = 5;
+}
+
+message ListRestaurantsRequest {}
+
+message ListRestaurantsResponse {
+  repeated Restaurant restaurants = 1;
+}
+
+message GetRestaurantRequest {
+  int64 id = 1;
+}
+
+message RestaurantResponse {
+  Restaurant restaurant = 1;
+}
+
+message SearchItemsRequest {
+  string query = 1;
+}
+
+message SearchItemsResponse {
+  repeated MenuItem items = 1;
+}
+
+message GetItemRequest {
+  int64 id = 1;
+}
+
+message ItemResponse {
+  MenuItem item = 1;
+}
+
+message RateRestaurantRequest {
+  int64 restaurant_id = 1;
+  int64 user_id = 2;
+  int32 rating = 3;
+  string comment = 4;
+}
+
+message RateRestaurantResponse {
+  string message = 1;
+}
