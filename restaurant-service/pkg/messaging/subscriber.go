@@ -11,8 +11,12 @@ import (
 )
 
 type OrderCreatedEvent struct {
-	ItemID   int64 `json:"item_id"`
-	Quantity int   `json:"quantity"`
+	OrderID string              `json:"order_id"`
+	Items   []usecase.OrderItem `json:"items"`
+}
+
+type SagaReply struct {
+	OrderID string `json:"order_id"`
 }
 
 func SubscribeOrderCreated(
@@ -38,17 +42,17 @@ func SubscribeOrderCreated(
 
 			err = stockUsecase.ReserveStock(
 				context.Background(),
-				event.ItemID,
-				event.Quantity,
+				event.Items,
 			)
 
 			if err != nil {
 
-				log.Println("Stock failed")
+				log.Println("Stock failed", err)
 
+				reply, _ := json.Marshal(SagaReply{OrderID: event.OrderID})
 				nc.Publish(
 					"stock.failed",
-					[]byte(err.Error()),
+					reply,
 				)
 
 				return
@@ -56,9 +60,10 @@ func SubscribeOrderCreated(
 
 			log.Println("Stock reserved")
 
+			reply, _ := json.Marshal(SagaReply{OrderID: event.OrderID})
 			nc.Publish(
 				"stock.reserved",
-				[]byte("success"),
+				reply,
 			)
 		},
 	)

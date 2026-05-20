@@ -37,4 +37,26 @@ func SubscribeNATS(nc *messaging.NatsClient, notifUC *usecase.NotifUsecase) {
 	if err != nil {
 		log.Printf("NATS subscribe order.delivered: %v", err)
 	}
+
+	_, err = nc.Subscribe("user.registered", func(msg *nats.Msg) {
+		var event messaging.UserRegisteredEvent
+		if err := json.Unmarshal(msg.Data, &event); err != nil {
+			log.Printf("NATS user.registered: unmarshal error: %v", err)
+			return
+		}
+		log.Printf("NATS user.registered: userID=%s", event.UserID)
+
+		if err := notifUC.Send(
+			context.Background(),
+			event.UserID,
+			domain.NotifWelcome,
+			"",
+			"",
+		); err != nil {
+			log.Printf("NATS user.registered: send email error: %v", err)
+		}
+	})
+	if err != nil {
+		log.Printf("NATS subscribe user.registered: %v", err)
+	}
 }

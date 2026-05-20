@@ -3,7 +3,8 @@ package usecase
 import (
 	"context"
 	"database/sql"
-	"errors"
+	"fmt"
+	"strconv"
 )
 
 type StockUsecase struct {
@@ -19,10 +20,14 @@ func NewStockUsecase(
 	}
 }
 
+type OrderItem struct {
+	ItemID   string `json:"item_id"`
+	Quantity int    `json:"quantity"`
+}
+
 func (u *StockUsecase) ReserveStock(
 	ctx context.Context,
-	itemID int64,
-	quantity int,
+	items []OrderItem,
 ) error {
 
 	tx, err := u.db.BeginTx(
@@ -36,8 +41,6 @@ func (u *StockUsecase) ReserveStock(
 
 	defer tx.Rollback()
 
-	var stock int
-
 	query := `
 		SELECT stock
 		FROM menu_items
@@ -45,37 +48,43 @@ func (u *StockUsecase) ReserveStock(
 		FOR UPDATE
 	`
 
-	err = tx.QueryRowContext(
-		ctx,
-		query,
-		itemID,
-	).Scan(&stock)
-
-	if err != nil {
-		return err
-	}
-
-	if stock < quantity {
-		return errors.New(
-			"not enough stock",
-		)
-	}
-
 	updateQuery := `
 		UPDATE menu_items
 		SET stock = stock - $1
 		WHERE id = $2
 	`
 
-	_, err = tx.ExecContext(
-		ctx,
-		updateQuery,
-		quantity,
-		itemID,
-	)
+	for _, item := range items {
+		itemIDInt, err := strconv.ParseInt(item.ItemID, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid item ID format: %w", err)
+		}
 
-	if err != nil {
-		return err
+		var stock int
+		err = tx.QueryRowContext(
+			ctx,
+			query,
+			itemIDInt,
+		).Scan(&stock)
+
+		if err != nil {
+			return err
+		}
+
+		if stock < item.Quantity {
+			return fmt.Errorf("not enough stock for item %s", item.ItemID)
+		}
+
+		_, err = tx.ExecContext(
+			ctx,
+			updateQuery,
+			item.Quantity,
+			itemIDInt,
+		)
+
+		if err != nil {
+			return err
+		}
 	}
 
 	return tx.Commit()

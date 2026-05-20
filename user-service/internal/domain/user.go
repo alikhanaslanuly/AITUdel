@@ -5,20 +5,17 @@ import (
 	"time"
 )
 
-// Roles
 const (
 	RoleUser    = "user"
 	RoleCourier = "courier"
 	RoleAdmin   = "admin"
 )
 
-// Courier statuses
 const (
 	CourierActive  = "active"
 	CourierOffline = "offline"
 )
 
-// Notification types
 const (
 	NotifWelcome        = "welcome"
 	NotifOrderDelivered = "order_delivered"

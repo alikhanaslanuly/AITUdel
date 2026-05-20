@@ -4,6 +4,9 @@ import (
 	"log"
 	"net"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"google.golang.org/grpc"
 
 	grpcHandler "restaurant-service/internal/delivery/grpc"
@@ -26,9 +29,23 @@ func main() {
 
 	defer db.Close()
 
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		log.Fatalf("migration driver: %v", err)
+	}
+	m, err := migrate.NewWithDatabaseInstance("file://migrations", "postgres", driver)
+	if err != nil {
+		log.Fatalf("migration instance: %v", err)
+	}
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("migrate up: %v", err)
+	}
+	log.Println("Migrations completed")
+
 	redisClient := cache.NewRedisClient()
 
 	natsConn := messaging.NewNATSConnection()
+	defer natsConn.Close()
 
 	repo := repository.NewPostgresRepository(db)
 

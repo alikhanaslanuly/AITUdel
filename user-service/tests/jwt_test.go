@@ -94,7 +94,7 @@ func TestParse_EmptyTokenReturnsError(t *testing.T) {
 }
 
 func TestIsAITUStudent_ValidDomain(t *testing.T) {
-	// We test domain logic directly
+
 	emails := []struct {
 		email     string
 		isStudent bool

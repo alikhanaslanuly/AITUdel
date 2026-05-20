@@ -12,12 +12,18 @@ import (
 	"github.com/google/uuid"
 )
 
+type OrderItemEvent struct {
+	ItemID   string `json:"item_id"`
+	Quantity int    `json:"quantity"`
+}
+
 type OrderEvent struct {
-	OrderID      string  `json:"order_id"`
-	UserID       string  `json:"user_id"`
-	RestaurantID string  `json:"restaurant_id"`
-	TotalPrice   float64 `json:"total_price"`
-	Status       string  `json:"status"`
+	OrderID      string           `json:"order_id"`
+	UserID       string           `json:"user_id"`
+	RestaurantID string           `json:"restaurant_id"`
+	TotalPrice   float64          `json:"total_price"`
+	Status       string           `json:"status"`
+	Items        []OrderItemEvent `json:"items"`
 }
 
 type OrderUsecase struct {
@@ -87,12 +93,21 @@ func (u *OrderUsecase) CreateOrder(ctx context.Context, req *domain.Order, promo
 		return nil, fmt.Errorf("create order: %w", err)
 	}
 
+	var itemEvents []OrderItemEvent
+	for _, item := range req.Items {
+		itemEvents = append(itemEvents, OrderItemEvent{
+			ItemID:   item.ItemID,
+			Quantity: item.Quantity,
+		})
+	}
+
 	event := OrderEvent{
 		OrderID:      req.ID,
 		UserID:       req.UserID,
 		RestaurantID: req.RestaurantID,
 		TotalPrice:   req.TotalPrice,
 		Status:       req.Status,
+		Items:        itemEvents,
 	}
 	u.nats.Publish("order.created", event)
 
@@ -192,4 +207,20 @@ func (u *OrderUsecase) ApplyPromo(ctx context.Context, orderID, userID, promoCod
 	u.cache.Delete(ctx, fmt.Sprintf("order:%s", orderID))
 
 	return discount, newTotal, nil
+}
+
+func (u *OrderUsecase) ConfirmOrder(ctx context.Context, orderID string) error {
+	if err := u.orderRepo.UpdateStatus(ctx, orderID, domain.StatusConfirmed); err != nil {
+		return err
+	}
+	u.cache.Delete(ctx, fmt.Sprintf("order:%s", orderID))
+	return nil
+}
+
+func (u *OrderUsecase) FailOrder(ctx context.Context, orderID string) error {
+	if err := u.orderRepo.UpdateStatus(ctx, orderID, domain.StatusCancelled); err != nil {
+		return err
+	}
+	u.cache.Delete(ctx, fmt.Sprintf("order:%s", orderID))
+	return nil
 }

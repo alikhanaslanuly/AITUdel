@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: aitudel-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: aitudel-redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  nats:
+    image: nats:alpine
+    container_name: aitudel-nats
+    ports:
+      - "4222:4222"
+    restart: always
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=users_db
+      - REDIS_ADDR=redis:6379
+      - NATS_URL=nats://nats:4222
+      - GRPC_PORT=50051
+      - JWT_SECRET=super-secret-key-369
+    ports:
+      - "50051:50051"
+    depends_on:
+      - db
+      - redis
+      - nats
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=orders_db
+      - REDIS_ADDR=redis:6379
+      - NATS_URL=nats://nats:4222
+      - GRPC_PORT=50052
+    ports:
+      - "50052:50052"
+    depends_on:
+      - db
+      - redis
+      - nats
+
+  restaurant-service:
+    build:
+      context: ./restaurant-service
+      dockerfile: Dockerfile
+    container_name: restaurant-service
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=restaurants_db
+      - REDIS_ADDR=redis:6379
+      - NATS_URL=nats://nats:4222
+      - GRPC_PORT=50053
+    ports:
+      - "50053:50053"
+    depends_on:
+      - db
+      - redis
+      - nats
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: api-gateway
+    environment:
+      - USER_SERVICE_URL=user-service:50051
+      - ORDER_SERVICE_URL=order-service:50052
+      - RESTAURANT_SERVICE_URL=restaurant-service:50053
+      - JWT_SECRET=super-secret-key-369
+    ports:
+      - "8080:8080"
+    depends_on:
+      - user-service
+      - order-service
+      - restaurant-service
+
+  frontend:
+    image: nginx:alpine
+    container_name: aitudel-frontend
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    ports:
+      - "3000:80"

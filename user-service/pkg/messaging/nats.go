@@ -55,5 +55,5 @@ type UserRegisteredEvent struct {
 type OrderDeliveredEvent struct {
 	UserID  string  `json:"user_id"`
 	OrderID string  `json:"order_id"`
-	Total   float64 `json:"total_price"` // matches Order Service OrderEvent.TotalPrice
+	Total   float64 `json:"total_price"`
 }

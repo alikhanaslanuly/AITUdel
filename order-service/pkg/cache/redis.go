@@ -52,3 +52,7 @@ func (r *RedisClient) Exists(ctx context.Context, key string) bool {
 	n, _ := r.client.Exists(ctx, key).Result()
 	return n > 0
 }
+
+func (r *RedisClient) Close() error {
+	return r.client.Close()
+}

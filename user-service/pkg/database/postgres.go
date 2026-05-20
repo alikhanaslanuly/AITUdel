@@ -26,9 +26,8 @@ func NewPostgres(dsn string) (*sql.DB, error) {
 }
 
 func RunMigrations(db *sql.DB) error {
-	// Retrieve the DSN from the underlying driver connection.
-	// We pass the DSN directly via the migrate URL instead.
-	return nil // called separately with DSN below
+
+	return nil
 }
 
 func RunMigrationsWithDSN(dsn string) error {

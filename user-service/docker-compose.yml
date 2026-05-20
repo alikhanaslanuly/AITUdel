@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: user_db
     ports:
-      - "5433:5432"   # offset to avoid conflict with order-service
+      - "5433:5432"   
     volumes:
       - pgdata_user:/var/lib/postgresql/data
     healthcheck:
@@ -18,18 +18,18 @@ services:
   redis:
     image: redis:8-alpine
     ports:
-      - "6380:6379"   # offset to avoid conflict with order-service
+      - "6380:6379"   
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
 
-  # ── NATS is shared with order-service ────────────────────────────────────────
-  # Do NOT start a second NATS container here — it binds to the same 4222 port.
-  # Run user-service alongside order-service's docker-compose which owns NATS,
-  # or use the combined compose at the root of the monorepo.
-  # NATS_URL for user-service must point to the shared instance: nats://nats:4222
+  
+  
+  
+  
+  
 
   user-service:
     build:

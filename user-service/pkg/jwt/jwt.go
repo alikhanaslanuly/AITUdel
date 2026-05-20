@@ -13,7 +13,7 @@ type Claims struct {
 	UserID    string `json:"user_id"`
 	Role      string `json:"role"`
 	IsStudent bool   `json:"is_student"`
-	TokenType string `json:"token_type"` // "access" | "refresh"
+	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }
 

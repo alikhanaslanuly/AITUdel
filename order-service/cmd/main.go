@@ -37,6 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("redis: %v", err)
 	}
+	defer redisClient.Close()
 
 	natsClient, err := messaging.NewNats(cfg.NatsURL)
 	if err != nil {
@@ -49,6 +50,8 @@ func main() {
 
 	orderUC := usecase.NewOrderUsecase(orderRepo, promoRepo, redisClient, natsClient)
 	cartUC := usecase.NewCartUsecase(redisClient)
+
+	grpc.SubscribeNATS(natsClient, orderUC)
 
 	handler := grpc.NewOrderHandler(orderUC, cartUC)
 

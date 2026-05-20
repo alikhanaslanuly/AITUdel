@@ -145,7 +145,6 @@ func buildUsecase(t *testing.T, db *sql.DB, redisAddr string) *usecase.AuthUseca
 	courierRepo := repository.NewCourierRepository(db)
 	notifRepo := repository.NewNotifRepository(db)
 
-	// Pass nil for NATS — acceptable in integration tests (no event bus needed)
 	return usecase.NewAuthUsecase(userRepo, tokenRepo, courierRepo, notifRepo, redisClient, jwtMgr, nil)
 }
 

@@ -8,29 +8,23 @@ import (
 )
 
 type Config struct {
-	// Postgres
 	DBHost     string
 	DBPort     string
 	DBUser     string
 	DBPassword string
 	DBName     string
 
-	// Redis
 	RedisHost string
 	RedisPort string
 
-	// NATS
 	NatsURL string
 
-	// gRPC
 	GRPCPort string
 
-	// JWT
 	JWTSecret          string
-	JWTAccessExpMin    string // minutes
-	JWTRefreshExpHours string // hours
+	JWTAccessExpMin    string
+	JWTRefreshExpHours string
 
-	// SMTP
 	SMTPHost     string
 	SMTPPort     string
 	SMTPUser     string

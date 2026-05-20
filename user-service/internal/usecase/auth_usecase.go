@@ -61,7 +61,7 @@ func (uc *AuthUsecase) Register(ctx context.Context, email, password, name, phon
 
 	if u.IsAITUStudent() {
 		u.IsStudent = true
-		u.Role = domain.RoleUser // students are regular users
+		u.Role = domain.RoleUser
 	}
 	if role == domain.RoleCourier {
 		u.Role = domain.RoleCourier
@@ -110,7 +110,7 @@ func (uc *AuthUsecase) Register(ctx context.Context, email, password, name, phon
 		UserID:  u.ID,
 		Type:    domain.NotifWelcome,
 		Subject: subject,
-		Success: false, // will update after actual send
+		Success: false,
 	}
 	if err = uc.notifRepo.Log(ctx, tx, notif); err != nil {
 		return nil, "", "", fmt.Errorf("log notif: %w", err)

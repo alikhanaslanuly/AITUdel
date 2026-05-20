@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AITUdel - Premium Delivery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-glow"></div>
+    
+    <nav class="glass-nav">
+        <div class="logo">AITU<span>del</span></div>
+        <div class="nav-links">
+            <button class="nav-btn" id="nav-menu">Menu</button>
+            <button class="nav-btn" id="nav-orders">Orders</button>
+            <button class="nav-btn btn-primary" id="nav-cart">Cart <span id="cart-count">0</span></button>
+            <button class="nav-btn" id="nav-login">Login</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        
+        <section id="auth-section" class="glass-card active">
+            <h2>Welcome Back</h2>
+            <div class="auth-tabs">
+                <button class="tab active" data-target="login">Login</button>
+                <button class="tab" data-target="register">Register</button>
+            </div>
+            
+            <form id="login-form" class="auth-form active">
+                <input type="email" id="l-email" placeholder="Email" required>
+                <input type="password" id="l-password" placeholder="Password" required>
+                <button type="submit" class="btn-primary full-width">Sign In</button>
+            </form>
+
+            <form id="register-form" class="auth-form">
+                <input type="text" id="r-name" placeholder="Full Name" required>
+                <input type="email" id="r-email" placeholder="Email" required>
+                <input type="password" id="r-password" placeholder="Password" required>
+                <input type="text" id="r-phone" placeholder="Phone Number" required>
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" id="r-student">
+                    <label for="r-student">I am an AITU Student</label>
+                </div>
+                <button type="submit" class="btn-primary full-width">Create Account</button>
+            </form>
+        </section>
+
+        
+        <section id="menu-section" class="hidden">
+            <div class="search-bar glass-card">
+                <input type="text" id="search-input" placeholder="Search for delicious food...">
+                <button class="btn-primary" id="btn-search">Search</button>
+            </div>
+            <h2 class="section-title">Featured Menu</h2>
+            <div class="grid" id="menu-grid">
+                
+            </div>
+        </section>
+
+        
+        <section id="cart-section" class="glass-card hidden">
+            <h2>Your Cart</h2>
+            <div id="cart-items" class="cart-items-list">
+                
+            </div>
+            
+            <div class="promo-section">
+                <input type="text" id="promo-input" placeholder="Enter Promo Code">
+                <button class="btn-secondary" id="apply-promo">Apply</button>
+            </div>
+            
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cart-total-price">0.00 ₸</span>
+            </div>
+
+            <div class="address-section">
+                <input type="text" id="delivery-address" placeholder="Delivery Address" required>
+            </div>
+
+            <button class="btn-primary full-width" id="btn-checkout">Checkout</button>
+        </section>
+
+        
+        <section id="orders-section" class="hidden">
+            <h2 class="section-title">Order History</h2>
+            <div class="grid" id="orders-grid">
+                
+            </div>
+        </section>
+
+    </main>
+
+    <div id="toast" class="toast hidden">Message</div>
+
+    <script src="app.js"></script>
+</body>
+</html>
