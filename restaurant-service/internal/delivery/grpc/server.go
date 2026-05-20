@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 
 	"restaurant-service/internal/domain"
 	"restaurant-service/internal/usecase"
@@ -137,7 +138,7 @@ func (s *Server) RateRestaurant(
 
 	review := domain.Review{
 		RestaurantID: req.RestaurantId,
-		UserID:       req.UserId,
+		UserID:       fmt.Sprintf("%d", req.UserId),
 		Rating:       int(req.Rating),
 		Comment:      req.Comment,
 	}
