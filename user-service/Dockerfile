@@ -2,7 +2,7 @@ FROM golang:alpine AS builder
 
 WORKDIR /app
 
-RUN apk add 
+RUN apk add --no-cache git
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -15,8 +15,8 @@ FROM alpine:3.21
 
 WORKDIR /app
 
-COPY 
-COPY 
+COPY --from=builder /app/user-service .
+COPY --from=builder /app/migrations ./migrations
 
 EXPOSE 50052
 

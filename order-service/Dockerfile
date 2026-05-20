@@ -13,8 +13,8 @@ FROM alpine:latest
 
 WORKDIR /root/
 
-COPY 
-COPY 
+COPY --from=builder /app/order-service .
+COPY --from=builder /app/migrations ./migrations
 
 EXPOSE 50051
 

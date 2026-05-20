@@ -2,7 +2,6 @@ FROM golang:1.22-alpine AS builder
 
 WORKDIR /workspace
 
-
 COPY . .
 
 WORKDIR /workspace/api-gateway
@@ -13,7 +12,7 @@ FROM alpine:latest
 
 WORKDIR /root/
 
-COPY 
+COPY --from=builder /workspace/api-gateway/api-gateway .
 
 EXPOSE 8080
 
