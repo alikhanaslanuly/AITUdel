@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   db:
@@ -38,7 +38,8 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=password
       - DB_NAME=users_db
-      - REDIS_ADDR=redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - NATS_URL=nats://nats:4222
       - GRPC_PORT=50051
       - JWT_SECRET=super-secret-key-369
@@ -60,7 +61,8 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=password
       - DB_NAME=orders_db
-      - REDIS_ADDR=redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - NATS_URL=nats://nats:4222
       - GRPC_PORT=50052
     ports:
@@ -81,7 +83,8 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=password
       - DB_NAME=restaurants_db
-      - REDIS_ADDR=redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - NATS_URL=nats://nats:4222
       - GRPC_PORT=50053
     ports:
