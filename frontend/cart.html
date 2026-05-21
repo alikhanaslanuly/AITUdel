@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AITUdel — Корзина</title>
+  <link rel="stylesheet" href="./css/style.css"/>
+</head>
+<body>
+<nav class="navbar" id="navbar"></nav>
+
+<div class="container">
+  <div class="section-title">🛒 Корзина</div>
+  <div class="cart-wrapper">
+    <div>
+      <div id="cart-items-list">
+        <div class="loader"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <div class="order-summary">
+      <h3>Ваш заказ</h3>
+      <div class="summary-row">
+        <span>Товары</span>
+        <span id="sum-items">0 ₸</span>
+      </div>
+      <div class="summary-row discount" id="sum-discount-row" style="display:none">
+        <span>Скидка</span>
+        <span id="sum-discount">0 ₸</span>
+      </div>
+      <div class="summary-row total">
+        <span>Итого</span>
+        <span id="sum-total">0 ₸</span>
+      </div>
+
+      <div class="promo-input">
+        <input type="text" id="promo-code" placeholder="Промокод (AITU2025)"/>
+        <button class="btn btn-outline btn-sm" onclick="applyPromo()">✓</button>
+      </div>
+
+      <input type="text" id="delivery-address" class="address-input" placeholder="Адрес доставки..."/>
+
+      <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="checkout()">
+        Оформить заказ
+      </button>
+      <button class="btn btn-outline" style="width:100%" onclick="clearCart()">
+        Очистить корзину
+      </button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer"><strong>AITUdel</strong> — Сделано студентами AITU ❤️</footer>
+
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/cart.js"></script>
+</body>
+</html>

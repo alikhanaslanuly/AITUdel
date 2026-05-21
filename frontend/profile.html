@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AITUdel — Профиль</title>
+  <link rel="stylesheet" href="./css/style.css"/>
+</head>
+<body>
+<nav class="navbar" id="navbar"></nav>
+
+<div class="container">
+  <div class="profile-card">
+    <div id="profile-avatar" class="profile-avatar">?</div>
+    <div id="profile-name" class="profile-name">Загрузка...</div>
+    <div id="profile-email" class="profile-email"></div>
+    <div id="student-badge"></div>
+
+    <hr class="profile-divider"/>
+
+    <div id="profile-form">
+      <div class="form-group">
+        <label>Имя</label>
+        <input type="text" id="edit-name" placeholder="Ваше имя"/>
+      </div>
+      <div class="form-group">
+        <label>Телефон</label>
+        <input type="text" id="edit-phone" placeholder="+7 777 ..."/>
+      </div>
+      <button class="btn btn-blue" style="width:100%;margin-bottom:10px" onclick="saveProfile()">
+        Сохранить
+      </button>
+      <button class="btn btn-danger" style="width:100%" onclick="doLogout()">
+        Выйти
+      </button>
+    </div>
+
+    <div id="alert-box" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<footer class="footer"><strong>AITUdel</strong> — Сделано студентами AITU ❤️</footer>
+
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/profile.js"></script>
+</body>
+</html>
