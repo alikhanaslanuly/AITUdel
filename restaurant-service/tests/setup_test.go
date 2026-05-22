@@ -16,7 +16,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 
 	dsn := os.Getenv("TEST_DB_DSN")
 	if dsn == "" {
-		dsn = "host=localhost port=5432 user=postgres password=postgres dbname=restaurant_db sslmode=disable"
+		dsn = "host=localhost port=5434 user=postgres password=postgres dbname=restaurant_db sslmode=disable"
 	}
 
 	db, err := sql.Open("postgres", dsn)
