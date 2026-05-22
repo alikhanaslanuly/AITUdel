@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "order-service/proto/order";
+
+service OrderService {
+    rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+    rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+    rpc ListUserOrders(ListUserOrdersRequest) returns (ListUserOrdersResponse);
+    rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+    rpc ApplyPromo(ApplyPromoRequest) returns (ApplyPromoResponse);
+    rpc AddToCart(AddToCartRequest) returns (AddToCartResponse);
+    rpc GetCart(GetCartRequest) returns (GetCartResponse);
+    rpc ClearCart(ClearCartRequest) returns (ClearCartResponse);
+}
+
+message OrderItem {
+    string item_id = 1;
+    string name = 2;
+    int32 quantity = 3;
+    double price = 4;
+}
+
+message Order {
+    string id = 1;
+    string user_id = 2;
+    string status = 3;
+    double total_price = 4;
+    string promo_code = 5;
+    double discount_amount = 6;
+    string delivery_address = 7;
+    string restaurant_id = 8;
+    repeated OrderItem items = 9;
+    string created_at = 10;
+}
+
+message CreateOrderRequest {
+    string user_id = 1;
+    string restaurant_id = 2;
+    string delivery_address = 3;
+    repeated OrderItem items = 4;
+    string promo_code = 5;
+    bool is_student = 6;
+}
+
+message CreateOrderResponse {
+    Order order = 1;
+}
+
+message GetOrderRequest {
+    string order_id = 1;
+}
+
+message GetOrderResponse {
+    Order order = 1;
+}
+
+message ListUserOrdersRequest {
+    string user_id = 1;
+    int32 page = 2;
+    int32 limit = 3;
+}
+
+message ListUserOrdersResponse {
+    repeated Order orders = 1;
+    int32 total = 2;
+}
+
+message CancelOrderRequest {
+    string order_id = 1;
+    string user_id = 2;
+}
+
+message CancelOrderResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message ApplyPromoRequest {
+    string order_id = 1;
+    string user_id = 2;
+    string promo_code = 3;
+    bool is_student = 4;
+    double order_total = 5;
+}
+
+message ApplyPromoResponse {
+    double discount_amount = 1;
+    double new_total = 2;
+    string message = 3;
+}
+
+message CartItem {
+    string item_id = 1;
+    string name = 2;
+    int32 quantity = 3;
+    double price = 4;
+}
+
+message AddToCartRequest {
+    string user_id = 1;
+    CartItem item = 2;
+}
+
+message AddToCartResponse {
+    bool success = 1;
+}
+
+message GetCartRequest {
+    string user_id = 1;
+}
+
+message GetCartResponse {
+    repeated CartItem items = 1;
+    double total = 2;
+}
+
+message ClearCartRequest {
+    string user_id = 1;
+}
+
+message ClearCartResponse {
+    bool success = 1;
+}

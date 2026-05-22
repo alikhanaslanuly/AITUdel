@@ -1,0 +1,375 @@
+version: "3.9"
+
+networks:
+  aitudel-net:
+    driver: bridge
+
+volumes:
+  service-logs:
+  pgdata-user:
+  pgdata-restaurant:
+  pgdata-order:
+  grafana_data:
+  prometheus_data:
+  loki_data:
+  tempo_data:
+
+services:
+
+  postgres-user:
+    image: postgres:17-alpine
+    container_name: aitudel-postgres-user
+    environment:
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB:       user_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata-user:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  postgres-restaurant:
+    image: postgres:17-alpine
+    container_name: aitudel-postgres-restaurant
+    environment:
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB:       restaurant_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-restaurant:/var/lib/postgresql/data
+      - ./restaurant-service/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  postgres-order:
+    image: postgres:17-alpine
+    container_name: aitudel-postgres-order
+    environment:
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB:       order_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata-order:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  redis-user:
+    image: redis:8-alpine
+    container_name: aitudel-redis-user
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  redis-restaurant:
+    image: redis:8-alpine
+    container_name: aitudel-redis-restaurant
+    ports:
+      - "6381:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  redis-order:
+    image: redis:8-alpine
+    container_name: aitudel-redis-order
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: aitudel-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["--http_port", "8222"]
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: ./user-service/user-service
+      dockerfile: Dockerfile
+    container_name: aitudel-user-service
+    ports:
+      - "50052:50052"
+      - "9102:9102"
+    environment:
+      DB_HOST:             postgres-user
+      DB_PORT:             "5432"
+      DB_USER:             postgres
+      DB_PASSWORD:         postgres
+      DB_NAME:             user_db
+      REDIS_HOST:          redis-user
+      REDIS_PORT:          "6379"
+      NATS_URL:            nats://nats:4222
+      GRPC_PORT:           "50052"
+      JWT_SECRET:          ${JWT_SECRET:-aitudel-super-secret-key-change-in-prod}
+      JWT_ACCESS_EXP_MIN:  "15"
+      JWT_REFRESH_EXP_HOURS: "168"
+      SMTP_HOST:           ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT:           ${SMTP_PORT:-587}
+      SMTP_USER:           ${SMTP_USER:-}
+      SMTP_PASSWORD:       ${SMTP_PASSWORD:-}
+      SMTP_FROM:           ${SMTP_FROM:-noreply@aitudel.kz}
+      METRICS_PORT:        "9102"
+      LOG_DIR:              /var/log/aitudel
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+    volumes:
+      - service-logs:/var/log/aitudel
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      redis-user:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  restaurant-service:
+    build:
+      context: ./restaurant-service
+      dockerfile: Dockerfile
+    container_name: aitudel-restaurant-service
+    ports:
+      - "50053:50053"
+      - "9103:9103"
+    environment:
+      DB_HOST:     postgres-restaurant
+      DB_PORT:     "5432"
+      DB_USER:     postgres
+      DB_PASSWORD: postgres
+      DB_NAME:     restaurant_db
+      REDIS_HOST:  redis-restaurant
+      REDIS_PORT:  "6379"
+      NATS_URL:    nats://nats:4222
+      GRPC_PORT:   "50053"
+      METRICS_PORT: "9103"
+      LOG_DIR: /var/log/aitudel
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+    volumes:
+      - service-logs:/var/log/aitudel
+    depends_on:
+      postgres-restaurant:
+        condition: service_healthy
+      redis-restaurant:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: aitudel-order-service
+    ports:
+      - "50051:50051"
+      - "9101:9101"
+    environment:
+      DB_HOST:     postgres-order
+      DB_PORT:     "5432"
+      DB_USER:     postgres
+      DB_PASSWORD: postgres
+      DB_NAME:     order_db
+      REDIS_HOST:  redis-order
+      REDIS_PORT:  "6379"
+      NATS_URL:    nats://nats:4222
+      GRPC_PORT:   "50051"
+      METRICS_PORT: "9101"
+      LOG_DIR: /var/log/aitudel
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-collector:4317
+    volumes:
+      - service-logs:/var/log/aitudel
+    depends_on:
+      postgres-order:
+        condition: service_healthy
+      redis-order:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: aitudel-frontend
+    ports:
+      - "80:80"
+      - "8080:8080"
+    environment:
+      USER_SERVICE_ADDR:       user-service:50052
+      ORDER_SERVICE_ADDR:      order-service:50051
+      RESTAURANT_SERVICE_ADDR: restaurant-service:50053
+      GATEWAY_PORT:            "8080"
+    depends_on:
+      - user-service
+      - order-service
+      - restaurant-service
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  db-seeder:
+    image: postgres:17-alpine
+    container_name: aitudel-db-seeder
+    environment:
+      PGPASSWORD: postgres
+    volumes:
+      - ./seeds:/seeds
+    entrypoint: ["sh", "/seeds/seed.sh"]
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      postgres-restaurant:
+        condition: service_healthy
+      postgres-order:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      restaurant-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+    networks:
+      - aitudel-net
+    restart: "no"
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: aitudel-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER:     admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP:     "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: aitudel-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: aitudel-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./observability/loki-config.yml:/etc/loki/loki-config.yml
+      - loki_data:/loki
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.2.1
+    container_name: aitudel-promtail
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./observability/promtail-config.yml:/etc/promtail/promtail-config.yml
+      - service-logs:/var/log/aitudel
+    depends_on:
+      - loki
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: aitudel-tempo
+    command: ["-config.file=/etc/tempo.yml"]
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./observability/tempo.yml:/etc/tempo.yml
+      - tempo_data:/var/tempo
+    networks:
+      - aitudel-net
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.113.0
+    container_name: aitudel-otel-collector
+    command: ["--config=/etc/otel-collector-config.yml"]
+    ports:
+      - "4319:4317"
+      - "4320:4318"
+    volumes:
+      - ./observability/otel-collector-config.yml:/etc/otel-collector-config.yml
+    depends_on:
+      - tempo
+    networks:
+      - aitudel-net
+    restart: unless-stopped

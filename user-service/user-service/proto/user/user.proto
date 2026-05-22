@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "user-service/proto/user";
+
+service UserService {
+    rpc Register(RegisterRequest)               returns (RegisterResponse);
+    rpc Login(LoginRequest)                     returns (LoginResponse);
+    rpc RefreshToken(RefreshTokenRequest)       returns (RefreshTokenResponse);
+    rpc GetProfile(GetProfileRequest)           returns (GetProfileResponse);
+    rpc UpdateProfile(UpdateProfileRequest)     returns (UpdateProfileResponse);
+    rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+    rpc Logout(LogoutRequest)                   returns (LogoutResponse);
+    rpc GetCourier(GetCourierRequest)           returns (GetCourierResponse);
+    rpc UpdateCourierStatus(UpdateCourierStatusRequest) returns (UpdateCourierStatusResponse);
+}
+
+
+message User {
+    string id         = 1;
+    string email      = 2;
+    string name       = 3;
+    string role       = 4;   // user | courier | admin
+    bool   is_student = 5;
+    string phone      = 6;
+    string created_at = 7;
+}
+
+message RegisterRequest {
+    string email    = 1;
+    string password = 2;
+    string name     = 3;
+    string phone    = 4;
+    string role     = 5;   // "user" or "courier"
+}
+
+message RegisterResponse {
+    User   user         = 1;
+    string access_token  = 2;
+    string refresh_token = 3;
+}
+
+message LoginRequest {
+    string email    = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    User   user         = 1;
+    string access_token  = 2;
+    string refresh_token = 3;
+}
+
+message RefreshTokenRequest {
+    string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+    string access_token  = 1;
+    string refresh_token = 2;
+}
+
+message LogoutRequest {
+    string refresh_token = 1;
+}
+
+message LogoutResponse {
+    bool success = 1;
+}
+
+message GetProfileRequest {
+    string user_id = 1;
+}
+
+message GetProfileResponse {
+    User user = 1;
+}
+
+message UpdateProfileRequest {
+    string user_id = 1;
+    string name    = 2;
+    string phone   = 3;
+}
+
+message UpdateProfileResponse {
+    User user = 1;
+}
+
+message SendNotificationRequest {
+    string user_id = 1;
+    string type    = 2;   // "welcome" | "order_delivered" | "promo"
+    string subject = 3;
+    string body    = 4;
+}
+
+message SendNotificationResponse {
+    bool success = 1;
+}
+
+
+message Courier {
+    string id        = 1;
+    string user_id   = 2;
+    string name      = 3;
+    string status    = 4;   // active | offline
+    double latitude  = 5;
+    double longitude = 6;
+}
+
+message GetCourierRequest {
+    string courier_id = 1;
+}
+
+message GetCourierResponse {
+    Courier courier = 1;
+}
+
+message UpdateCourierStatusRequest {
+    string courier_id = 1;
+    string status     = 2;
+    double latitude   = 3;
+    double longitude  = 4;
+}
+
+message UpdateCourierStatusResponse {
+    bool success = 1;
+}

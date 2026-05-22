@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AITUdel — Доставка еды</title>
+  <link rel="stylesheet" href="./css/style.css"/>
+</head>
+<body>
+
+<nav class="navbar" id="navbar"></nav>
+
+<div class="hero">
+  <h1>Доставка еды и продуктов<br/><span>быстро и вкусно</span></h1>
+  <p>Студентам AITU скидка 15% по промокоду AITU2025 🎓</p>
+  <div class="hero-search">
+    <input type="text" id="hero-search" placeholder="Что хотите поесть?" />
+    <button onclick="doHeroSearch()">Найти</button>
+  </div>
+</div>
+
+<div class="container">
+  <div id="search-results-section" style="display:none">
+    <div class="section-title">🔍 Результаты поиска</div>
+    <div id="search-results" class="menu-items-grid"></div>
+  </div>
+
+  <div id="main-section">
+    <div class="section-title">🏪 Рестораны и магазины</div>
+    <div id="restaurants-grid" class="cards-grid">
+      <div class="loader"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <strong>AITUdel</strong> — Сделано студентами AITU ❤️
+</footer>
+
+<script src="./js/api.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/main.js"></script>
+</body>
+</html>
