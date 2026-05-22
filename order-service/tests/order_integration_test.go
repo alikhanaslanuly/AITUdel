@@ -133,7 +133,7 @@ func TestOrderRepo_UpdateStatus(t *testing.T) {
 	err := repo.UpdateStatus(ctx, orderID, domain.StatusConfirmed)
 	require.NoError(t, err, "update status")
 
-	got, err := repo.GetByID(ctx, orderID)
+	got, err := repo.GetByID(ctx, ordыerID)
 	require.NoError(t, err)
 	assert.Equal(t, domain.StatusConfirmed, got.Status)
 }

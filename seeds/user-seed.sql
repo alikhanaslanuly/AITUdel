@@ -13,7 +13,7 @@ INSERT INTO users (id, email, password_hash, name, phone, role, is_student, prom
   (
     '00000000-0000-0004-0000-000000000002',
     'student@aitu.kz',
-    crypt('demo1234', gen_salt('bf', 10)),
+    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LExZCNSiu2G',
     'Damir Seitkali',
     '+77027654321',
     'user',
