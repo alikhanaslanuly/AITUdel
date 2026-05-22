@@ -13,6 +13,10 @@ import (
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	orderpb "api-gateway/proto/order"
+	restpb "api-gateway/proto/restaurant"
+	userpb "api-gateway/proto/user"
 )
 
 type GatewayClients struct {
@@ -47,95 +51,35 @@ func ctx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 10*time.Second)
 }
 
-type rawClient struct {
-	conn *grpc.ClientConn
-}
-
-func (c *rawClient) call(method string, req, resp any) error {
-	cx, cancel := ctx()
-	defer cancel()
-	return c.conn.Invoke(cx, method, req, resp)
-}
-
-// User Service
-type RegisterReq struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Name     string `json:"name"`
-	Phone    string `json:"phone"`
-	Role     string `json:"role"`
-}
-
-type LoginReq struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type UpdateProfileReq struct {
-	UserID string `json:"user_id"`
-	Name   string `json:"name"`
-	Phone  string `json:"phone"`
-}
-
-// Order Service
-type OrderItemReq struct {
-	ItemID   string  `json:"item_id"`
-	Name     string  `json:"name"`
-	Quantity int32   `json:"quantity"`
-	Price    float64 `json:"price"`
-}
-
-type CreateOrderReq struct {
-	UserID          string         `json:"user_id"`
-	RestaurantID    string         `json:"restaurant_id"`
-	DeliveryAddress string         `json:"delivery_address"`
-	Items           []OrderItemReq `json:"items"`
-	PromoCode       string         `json:"promo_code"`
-	IsStudent       bool           `json:"is_student"`
-}
-
-type AddToCartReq struct {
-	UserID string       `json:"user_id"`
-	Item   OrderItemReq `json:"item"`
-}
-
-type ApplyPromoReq struct {
-	OrderID    string  `json:"order_id"`
-	UserID     string  `json:"user_id"`
-	PromoCode  string  `json:"promo_code"`
-	IsStudent  bool    `json:"is_student"`
-	OrderTotal float64 `json:"order_total"`
-}
-
-type CancelOrderReq struct {
-	OrderID string `json:"order_id"`
-	UserID  string `json:"user_id"`
-}
-
-// Restaurant Service
-type RateReq struct {
-	RestaurantID int64  `json:"restaurant_id"`
-	UserID       int64  `json:"user_id"`
-	Rating       int32  `json:"rating"`
-	Comment      string `json:"comment"`
-}
-
-// ─── Хендлеры User Service ──────────────────────────────────────
-
 func handleRegister(userConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req RegisterReq
-		if err := decodeBody(r, &req); err != nil {
+		var body struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+			Name     string `json:"name"`
+			Phone    string `json:"phone"`
+			Role     string `json:"role"`
+		}
+		if err := decodeBody(r, &body); err != nil {
 			writeError(w, 400, "bad request")
 			return
 		}
-		if req.Role == "" {
-			req.Role = "user"
+		if body.Role == "" {
+			body.Role = "user"
 		}
 
-		var resp map[string]any
-		c := &rawClient{conn: userConn}
-		if err := c.call("/user.UserService/Register", req, &resp); err != nil {
+		c := userpb.NewUserServiceClient(userConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.Register(cx, &userpb.RegisterRequest{
+			Email:    body.Email,
+			Password: body.Password,
+			Name:     body.Name,
+			Phone:    body.Phone,
+			Role:     body.Role,
+		})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -145,14 +89,24 @@ func handleRegister(userConn *grpc.ClientConn) http.HandlerFunc {
 
 func handleLogin(userConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req LoginReq
-		if err := decodeBody(r, &req); err != nil {
+		var body struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+		if err := decodeBody(r, &body); err != nil {
 			writeError(w, 400, "bad request")
 			return
 		}
-		var resp map[string]any
-		c := &rawClient{conn: userConn}
-		if err := c.call("/user.UserService/Login", req, &resp); err != nil {
+
+		c := userpb.NewUserServiceClient(userConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.Login(cx, &userpb.LoginRequest{
+			Email:    body.Email,
+			Password: body.Password,
+		})
+		if err != nil {
 			writeError(w, 401, "invalid credentials")
 			return
 		}
@@ -163,9 +117,13 @@ func handleLogin(userConn *grpc.ClientConn) http.HandlerFunc {
 func handleGetProfile(userConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.URL.Query().Get("user_id")
-		var resp map[string]any
-		c := &rawClient{conn: userConn}
-		if err := c.call("/user.UserService/GetProfile", map[string]string{"user_id": userID}, &resp); err != nil {
+
+		c := userpb.NewUserServiceClient(userConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.GetProfile(cx, &userpb.GetProfileRequest{UserId: userID})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -175,14 +133,26 @@ func handleGetProfile(userConn *grpc.ClientConn) http.HandlerFunc {
 
 func handleUpdateProfile(userConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req UpdateProfileReq
-		if err := decodeBody(r, &req); err != nil {
+		var body struct {
+			UserID string `json:"user_id"`
+			Name   string `json:"name"`
+			Phone  string `json:"phone"`
+		}
+		if err := decodeBody(r, &body); err != nil {
 			writeError(w, 400, "bad request")
 			return
 		}
-		var resp map[string]any
-		c := &rawClient{conn: userConn}
-		if err := c.call("/user.UserService/UpdateProfile", req, &resp); err != nil {
+
+		c := userpb.NewUserServiceClient(userConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.UpdateProfile(cx, &userpb.UpdateProfileRequest{
+			UserId: body.UserID,
+			Name:   body.Name,
+			Phone:  body.Phone,
+		})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -192,22 +162,31 @@ func handleUpdateProfile(userConn *grpc.ClientConn) http.HandlerFunc {
 
 func handleLogout(userConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req map[string]string
-		decodeBody(r, &req)
-		var resp map[string]any
-		c := &rawClient{conn: userConn}
-		c.call("/user.UserService/Logout", req, &resp)
+		var body struct {
+			UserID       string `json:"user_id"`
+			RefreshToken string `json:"refresh_token"`
+		}
+		decodeBody(r, &body)
+
+		c := userpb.NewUserServiceClient(userConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		c.Logout(cx, &userpb.LogoutRequest{ //nolint
+			RefreshToken: body.RefreshToken,
+		})
 		writeJSON(w, 200, map[string]bool{"success": true})
 	}
 }
 
-// ─── Хендлеры Restaurant Service ────────────────────────────────
-
 func handleListRestaurants(restConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var resp map[string]any
-		c := &rawClient{conn: restConn}
-		if err := c.call("/restaurant.RestaurantService/ListRestaurants", map[string]any{}, &resp); err != nil {
+		c := restpb.NewRestaurantServiceClient(restConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.ListRestaurants(cx, &restpb.ListRestaurantsRequest{})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -219,9 +198,13 @@ func handleGetRestaurant(restConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idStr := r.URL.Query().Get("id")
 		id, _ := strconv.ParseInt(idStr, 10, 64)
-		var resp map[string]any
-		c := &rawClient{conn: restConn}
-		if err := c.call("/restaurant.RestaurantService/GetRestaurant", map[string]any{"id": id}, &resp); err != nil {
+
+		c := restpb.NewRestaurantServiceClient(restConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.GetRestaurant(cx, &restpb.GetRestaurantRequest{Id: id})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -232,9 +215,13 @@ func handleGetRestaurant(restConn *grpc.ClientConn) http.HandlerFunc {
 func handleSearchItems(restConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query().Get("q")
-		var resp map[string]any
-		c := &rawClient{conn: restConn}
-		if err := c.call("/restaurant.RestaurantService/SearchItems", map[string]string{"query": q}, &resp); err != nil {
+
+		c := restpb.NewRestaurantServiceClient(restConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.SearchItems(cx, &restpb.SearchItemsRequest{Query: q})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -246,9 +233,13 @@ func handleGetItem(restConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idStr := r.URL.Query().Get("id")
 		id, _ := strconv.ParseInt(idStr, 10, 64)
-		var resp map[string]any
-		c := &rawClient{conn: restConn}
-		if err := c.call("/restaurant.RestaurantService/GetItem", map[string]any{"id": id}, &resp); err != nil {
+
+		c := restpb.NewRestaurantServiceClient(restConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.GetItem(cx, &restpb.GetItemRequest{Id: id})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -258,14 +249,28 @@ func handleGetItem(restConn *grpc.ClientConn) http.HandlerFunc {
 
 func handleRateRestaurant(restConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req RateReq
-		if err := decodeBody(r, &req); err != nil {
+		var body struct {
+			RestaurantID int64  `json:"restaurant_id"`
+			UserID       int64  `json:"user_id"`
+			Rating       int32  `json:"rating"`
+			Comment      string `json:"comment"`
+		}
+		if err := decodeBody(r, &body); err != nil {
 			writeError(w, 400, "bad request")
 			return
 		}
-		var resp map[string]any
-		c := &rawClient{conn: restConn}
-		if err := c.call("/restaurant.RestaurantService/RateRestaurant", req, &resp); err != nil {
+
+		c := restpb.NewRestaurantServiceClient(restConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.RateRestaurant(cx, &restpb.RateRestaurantRequest{
+			RestaurantId: body.RestaurantID,
+			UserId:       body.UserID,
+			Rating:       body.Rating,
+			Comment:      body.Comment,
+		})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -273,18 +278,49 @@ func handleRateRestaurant(restConn *grpc.ClientConn) http.HandlerFunc {
 	}
 }
 
-// ─── Хендлеры Order Service ─────────────────────────────────────
-
 func handleCreateOrder(orderConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req CreateOrderReq
-		if err := decodeBody(r, &req); err != nil {
+		var body struct {
+			UserID          string `json:"user_id"`
+			RestaurantID    string `json:"restaurant_id"`
+			DeliveryAddress string `json:"delivery_address"`
+			PromoCode       string `json:"promo_code"`
+			IsStudent       bool   `json:"is_student"`
+			Items           []struct {
+				ItemID   string  `json:"item_id"`
+				Name     string  `json:"name"`
+				Quantity int32   `json:"quantity"`
+				Price    float64 `json:"price"`
+			} `json:"items"`
+		}
+		if err := decodeBody(r, &body); err != nil {
 			writeError(w, 400, "bad request")
 			return
 		}
-		var resp map[string]any
-		c := &rawClient{conn: orderConn}
-		if err := c.call("/order.OrderService/CreateOrder", req, &resp); err != nil {
+
+		items := make([]*orderpb.OrderItem, len(body.Items))
+		for i, it := range body.Items {
+			items[i] = &orderpb.OrderItem{
+				ItemId:   it.ItemID,
+				Name:     it.Name,
+				Quantity: it.Quantity,
+				Price:    it.Price,
+			}
+		}
+
+		c := orderpb.NewOrderServiceClient(orderConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.CreateOrder(cx, &orderpb.CreateOrderRequest{
+			UserId:          body.UserID,
+			RestaurantId:    body.RestaurantID,
+			DeliveryAddress: body.DeliveryAddress,
+			PromoCode:       body.PromoCode,
+			IsStudent:       body.IsStudent,
+			Items:           items,
+		})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -295,9 +331,13 @@ func handleCreateOrder(orderConn *grpc.ClientConn) http.HandlerFunc {
 func handleGetOrder(orderConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		orderID := r.URL.Query().Get("order_id")
-		var resp map[string]any
-		c := &rawClient{conn: orderConn}
-		if err := c.call("/order.OrderService/GetOrder", map[string]string{"order_id": orderID}, &resp); err != nil {
+
+		c := orderpb.NewOrderServiceClient(orderConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.GetOrder(cx, &orderpb.GetOrderRequest{OrderId: orderID})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -316,13 +356,17 @@ func handleListUserOrders(orderConn *grpc.ClientConn) http.HandlerFunc {
 		if limit == 0 {
 			limit = 10
 		}
-		var resp map[string]any
-		c := &rawClient{conn: orderConn}
-		if err := c.call("/order.OrderService/ListUserOrders", map[string]any{
-			"user_id": userID,
-			"page":    int32(page),
-			"limit":   int32(limit),
-		}, &resp); err != nil {
+
+		c := orderpb.NewOrderServiceClient(orderConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.ListUserOrders(cx, &orderpb.ListUserOrdersRequest{
+			UserId: userID,
+			Page:   int32(page),
+			Limit:  int32(limit),
+		})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -332,14 +376,24 @@ func handleListUserOrders(orderConn *grpc.ClientConn) http.HandlerFunc {
 
 func handleCancelOrder(orderConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req CancelOrderReq
-		if err := decodeBody(r, &req); err != nil {
+		var body struct {
+			OrderID string `json:"order_id"`
+			UserID  string `json:"user_id"`
+		}
+		if err := decodeBody(r, &body); err != nil {
 			writeError(w, 400, "bad request")
 			return
 		}
-		var resp map[string]any
-		c := &rawClient{conn: orderConn}
-		if err := c.call("/order.OrderService/CancelOrder", req, &resp); err != nil {
+
+		c := orderpb.NewOrderServiceClient(orderConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.CancelOrder(cx, &orderpb.CancelOrderRequest{
+			OrderId: body.OrderID,
+			UserId:  body.UserID,
+		})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -349,14 +403,30 @@ func handleCancelOrder(orderConn *grpc.ClientConn) http.HandlerFunc {
 
 func handleApplyPromo(orderConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req ApplyPromoReq
-		if err := decodeBody(r, &req); err != nil {
+		var body struct {
+			OrderID    string  `json:"order_id"`
+			UserID     string  `json:"user_id"`
+			PromoCode  string  `json:"promo_code"`
+			IsStudent  bool    `json:"is_student"`
+			OrderTotal float64 `json:"order_total"`
+		}
+		if err := decodeBody(r, &body); err != nil {
 			writeError(w, 400, "bad request")
 			return
 		}
-		var resp map[string]any
-		c := &rawClient{conn: orderConn}
-		if err := c.call("/order.OrderService/ApplyPromo", req, &resp); err != nil {
+
+		c := orderpb.NewOrderServiceClient(orderConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.ApplyPromo(cx, &orderpb.ApplyPromoRequest{
+			OrderId:    body.OrderID,
+			UserId:     body.UserID,
+			PromoCode:  body.PromoCode,
+			IsStudent:  body.IsStudent,
+			OrderTotal: body.OrderTotal,
+		})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -366,14 +436,34 @@ func handleApplyPromo(orderConn *grpc.ClientConn) http.HandlerFunc {
 
 func handleAddToCart(orderConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req AddToCartReq
-		if err := decodeBody(r, &req); err != nil {
+		var body struct {
+			UserID string `json:"user_id"`
+			Item   struct {
+				ItemID   string  `json:"item_id"`
+				Name     string  `json:"name"`
+				Quantity int32   `json:"quantity"`
+				Price    float64 `json:"price"`
+			} `json:"item"`
+		}
+		if err := decodeBody(r, &body); err != nil {
 			writeError(w, 400, "bad request")
 			return
 		}
-		var resp map[string]any
-		c := &rawClient{conn: orderConn}
-		if err := c.call("/order.OrderService/AddToCart", req, &resp); err != nil {
+
+		c := orderpb.NewOrderServiceClient(orderConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.AddToCart(cx, &orderpb.AddToCartRequest{
+			UserId: body.UserID,
+			Item: &orderpb.CartItem{
+				ItemId:   body.Item.ItemID,
+				Name:     body.Item.Name,
+				Quantity: body.Item.Quantity,
+				Price:    body.Item.Price,
+			},
+		})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -384,9 +474,13 @@ func handleAddToCart(orderConn *grpc.ClientConn) http.HandlerFunc {
 func handleGetCart(orderConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.URL.Query().Get("user_id")
-		var resp map[string]any
-		c := &rawClient{conn: orderConn}
-		if err := c.call("/order.OrderService/GetCart", map[string]string{"user_id": userID}, &resp); err != nil {
+
+		c := orderpb.NewOrderServiceClient(orderConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.GetCart(cx, &orderpb.GetCartRequest{UserId: userID})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -396,19 +490,23 @@ func handleGetCart(orderConn *grpc.ClientConn) http.HandlerFunc {
 
 func handleClearCart(orderConn *grpc.ClientConn) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req map[string]string
-		decodeBody(r, &req)
-		var resp map[string]any
-		c := &rawClient{conn: orderConn}
-		if err := c.call("/order.OrderService/ClearCart", req, &resp); err != nil {
+		var body struct {
+			UserID string `json:"user_id"`
+		}
+		decodeBody(r, &body)
+
+		c := orderpb.NewOrderServiceClient(orderConn)
+		cx, cancel := ctx()
+		defer cancel()
+
+		resp, err := c.ClearCart(cx, &orderpb.ClearCartRequest{UserId: body.UserID})
+		if err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
 		writeJSON(w, 200, resp)
 	}
 }
-
-// ─── Роутер ─────────────────────────────────────────────────────
 
 func main() {
 	userConn := connectGRPC(getEnv("USER_SERVICE_ADDR", "localhost:50052"))
