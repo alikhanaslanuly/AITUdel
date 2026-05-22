@@ -3,16 +3,20 @@ server:
   grpc_listen_port: 0
 
 positions:
-  filename: /tmp/promtail-positions.yaml
+  filename: /tmp/positions.yaml
 
 clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-  - job_name: aitudel-logs
+  - job_name: aitudel-file-logs
     static_configs:
-      - targets:
-          - localhost
+      - targets: [localhost]
         labels:
-          job: aitudel
           __path__: /var/log/aitudel/*.log
+          __path_exclude__: /var/log/aitudel/*-audit.log 
+
+    relabel_configs:
+      - source_labels: [__path__]
+        regex: /var/log/aitudel/(.+)\.log
+        target_label: service
